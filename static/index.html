@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Offerte Hard Disk</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#666; --line:#ddd; --accent:#0a6cff; --good:#0a7d33; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16181c; --fg:#eee; --muted:#9aa; --line:#333; --accent:#5aa2ff; --good:#4cc77a; } }
+  body { margin:0; padding:16px; font:15px system-ui,sans-serif; background:var(--bg); color:var(--fg); }
+  main { max-width:1000px; margin:auto; }
+  form { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+  input,select,button { font:inherit; padding:6px 8px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--fg); }
+  button { background:var(--accent); color:#fff; border-color:var(--accent); cursor:pointer; }
+  .table-wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; }
+  th,td { padding:8px; border-bottom:1px solid var(--line); text-align:left; }
+  th { cursor:pointer; white-space:nowrap; }
+  .num { text-align:right; white-space:nowrap; }
+  .best { color:var(--good); font-weight:600; }
+  .msg { color:var(--muted); margin:8px 0; }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Offerte Hard Disk</h1>
+  <form id="f">
+    <input id="q" placeholder="Cerca (es. seagate 4tb)" size="22">
+    <select id="kind"><option value="">Tutti i tipi</option><option>HDD</option><option>SSD</option><option>NAS</option></select>
+    <select id="form"><option value="">Interno/esterno</option><option value="interno">Interno</option><option value="esterno">Esterno</option></select>
+    <input id="mincap" type="number" min="0" step="0.5" placeholder="TB min" style="width:90px">
+    <input id="maxprice" type="number" min="0" placeholder="Prezzo max €" style="width:120px">
+    <select id="src"></select>
+    <button>Cerca</button>
+  </form>
+  <div id="msg" class="msg"></div>
+  <div class="table-wrap"><table>
+    <thead><tr id="head"></tr></thead><tbody id="body"></tbody>
+  </table></div>
+</main>
+<script>
+const cols = [["title","Prodotto"],["source","Fonte"],["kind","Tipo"],["capacity_tb","TB"],["price","Prezzo €"],["price_per_tb","€/TB"],["discount_pct","Sconto"]];
+let data = [], sort = ["price_per_tb", 1];
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function render() {
+  const kind=$("kind").value, form=$("form").value, minCap=+$("mincap").value||0, maxP=+$("maxprice").value||Infinity;
+  const rows = data.filter(o => (!kind||o.kind===kind) && (!form||o.form===form) &&
+    (o.capacity_tb||0)>=minCap && o.price<=maxP);
+  const [k,dir] = sort;
+  rows.sort((a,b) => ((a[k]??Infinity) > (b[k]??Infinity) ? 1 : -1) * dir * (k==="discount_pct"?-1:1));
+  const best = Math.min(...rows.map(r => r.price_per_tb ?? Infinity));
+  $("head").innerHTML = cols.map(([k,l]) => `<th data-k="${k}">${l}${sort[0]===k?(sort[1]>0?" ▲":" ▼"):""}</th>`).join("");
+  $("body").innerHTML = rows.map(o => `<tr>
+    <td><a href="${esc(o.url)}" target="_blank" rel="noopener noreferrer">${esc(o.title)}</a></td>
+    <td>${esc(o.source)}</td><td>${o.kind} ${o.form}</td>
+    <td class="num">${o.capacity_tb ?? "?"}</td>
+    <td class="num">${o.price.toFixed(2)}</td>
+    <td class="num ${o.price_per_tb===best?"best":""}">${o.price_per_tb ?? "–"}</td>
+    <td class="num">${o.discount_pct ? "-"+o.discount_pct+"%" : "–"}</td></tr>`).join("");
+  $("head").querySelectorAll("th").forEach(th => th.onclick = () => {
+    sort = [th.dataset.k, sort[0]===th.dataset.k ? -sort[1] : 1]; render();
+  });
+}
+
+async function load() {
+  $("msg").textContent = "Ricerca in corso…";
+  const p = new URLSearchParams({q:$("q").value}); if ($("src").value) p.set("source",$("src").value);
+  const r = await (await fetch("/api/search?"+p)).json();
+  data = r.offers;
+  const errs = Object.entries(r.errors).map(([k,v]) => `${k}: ${v}`).join(" · ");
+  $("msg").textContent = `${data.length} offerte` + (errs ? " — " + errs : "");
+  render();
+}
+
+(async () => {
+  const s = await (await fetch("/api/sources")).json();
+  $("src").innerHTML = `<option value="">Tutte le fonti</option>` +
+    Object.entries(s).map(([n,ok]) => `<option value="${n}">${n}${ok?"":" (non configurata)"}</option>`).join("");
+  $("f").onsubmit = e => { e.preventDefault(); load(); };
+  ["kind","form","mincap","maxprice"].forEach(i => $(i).oninput = render);
+  $("src").value = "demo"; load();
+})();
+</script>
+</body>
+</html>
