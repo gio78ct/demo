@@ -81,7 +81,7 @@ async function load() {
     Object.entries(s).map(([n,ok]) => `<option value="${n}">${n}${ok?"":" (non configurata)"}</option>`).join("");
   $("f").onsubmit = e => { e.preventDefault(); load(); };
   ["kind","form","mincap","maxprice"].forEach(i => $(i).oninput = render);
-  $("src").value = "demo"; load();
+  load();
 })();
 </script>
 </body>

@@ -13,7 +13,6 @@ python3 -m unittest discover tests
 
 | Fonte | Stato |
 |---|---|
-| `demo` | Dati di esempio, sempre disponibile |
 | `ebay` | eBay Browse API (EBAY_IT). Attiva con `EBAY_CLIENT_ID` e `EBAY_CLIENT_SECRET` (developer.ebay.com). Non testata con credenziali reali |
 | Amazon.it | Non implementata: serve la Product Advertising API (account Associates) |
 | Trovaprezzi / idealo | Non implementate: non hanno API pubbliche e lo scraping può violare i ToS |

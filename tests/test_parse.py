@@ -2,7 +2,6 @@ import unittest
 
 from offers.models import Offer
 from offers.parse import parse_capacity_tb, parse_kind, parse_form
-from offers.sources import SampleSource
 
 
 class ParseTests(unittest.TestCase):
@@ -21,9 +20,6 @@ class ParseTests(unittest.TestCase):
         d = Offer.build("x", "Disco 4TB", 80, "u", original_price=100).to_dict()
         self.assertEqual(d["price_per_tb"], 20.0)
         self.assertEqual(d["discount_pct"], 20.0)
-
-    def test_sample_search(self):
-        self.assertTrue(all("seagate" in o.title.lower() for o in SampleSource().search("seagate")))
 
 
 if __name__ == "__main__":
