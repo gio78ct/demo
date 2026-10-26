@@ -18,12 +18,13 @@ class Offer:
     form: str = "interno"
 
     @classmethod
-    def build(cls, source, title, price, url, image=None, original_price=None, brand=None):
+    def build(cls, source, title, price, url, image=None, original_price=None, brand=None,
+              kind=None, form=None, capacity_tb=None):
         return cls(
             source=source, title=title, price=float(price), url=url, image=image,
             original_price=float(original_price) if original_price else None,
-            brand=brand, capacity_tb=parse_capacity_tb(title),
-            kind=parse_kind(title), form=parse_form(title),
+            brand=brand, capacity_tb=capacity_tb or parse_capacity_tb(title),
+            kind=kind or parse_kind(title), form=form or parse_form(title),
         )
 
     def to_dict(self):

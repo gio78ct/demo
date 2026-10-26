@@ -4,6 +4,7 @@ import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
+from offers.csv_import import parse_csv
 from offers.sources import SOURCES
 
 STATIC = os.path.join(os.path.dirname(__file__), "static")
@@ -46,6 +47,30 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def do_POST(self):
+        if urlparse(self.path).path != "/api/import":
+            self.send_error(404)
+            return
+        length = int(self.headers.get("Content-Length", 0))
+        if length > 2_000_000:
+            self.send_error(413)
+            return
+        status, payload = import_csv(self.rfile.read(length))
+        body = json.dumps(payload).encode()
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+
+def import_csv(raw):
+    try:
+        offers = parse_csv(raw.decode("utf-8-sig"), default_source="importato")
+    except (ValueError, UnicodeDecodeError) as e:
+        return 400, {"error": str(e)}
+    return 200, {"offers": [o.to_dict() for o in offers]}
 
 
 if __name__ == "__main__":

@@ -22,5 +22,27 @@ class ParseTests(unittest.TestCase):
         self.assertEqual(d["discount_pct"], 20.0)
 
 
+class CsvTests(unittest.TestCase):
+    def test_semicolon_and_italian_decimals(self):
+        from offers.csv_import import parse_csv
+        o = parse_csv("prodotto;prezzo;prezzo_listino\nWD Elements 4TB esterno;1.299,90;1.500,00\n")[0]
+        self.assertEqual(o.price, 1299.9)
+        self.assertEqual(o.original_price, 1500.0)
+        self.assertEqual(o.capacity_tb, 4)
+
+    def test_missing_columns_and_bad_row(self):
+        from offers.csv_import import parse_csv
+        with self.assertRaises(ValueError):
+            parse_csv("nome,costo\nx,1\n")
+        with self.assertRaisesRegex(ValueError, "riga 2"):
+            parse_csv("prodotto,prezzo\nx,abc\n")
+
+    def test_bundled_file(self):
+        from offers.csv_import import CsvSource
+        offers = CsvSource().search("")
+        self.assertEqual(len(offers), 20)
+        self.assertTrue(all(o.capacity_tb for o in offers))
+
+
 if __name__ == "__main__":
     unittest.main()

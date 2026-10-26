@@ -4,17 +4,9 @@ import os
 import urllib.parse
 import urllib.request
 
+from .base import Source
+from .csv_import import CsvSource
 from .models import Offer
-
-
-class Source:
-    name = "base"
-
-    def available(self):
-        return True
-
-    def search(self, query, limit=50):
-        raise NotImplementedError
 
 
 class EbaySource(Source):
@@ -65,4 +57,4 @@ class EbaySource(Source):
 
 # Amazon.it (Product Advertising API) e Trovaprezzi/idealo non hanno ancora un adapter:
 # vedi README. Per aggiungerne uno basta una sottoclasse di Source registrata qui sotto.
-SOURCES = {s.name: s for s in (EbaySource(),)}
+SOURCES = {s.name: s for s in (CsvSource(), EbaySource())}

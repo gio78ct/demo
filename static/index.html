@@ -20,6 +20,7 @@
   .best { color:var(--good); font-weight:600; }
   .msg { color:var(--muted); margin:8px 0; }
   a { color:var(--accent); }
+  .file { padding:6px 8px; border:1px solid var(--line); border-radius:6px; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -33,6 +34,7 @@
     <input id="maxprice" type="number" min="0" placeholder="Prezzo max €" style="width:120px">
     <select id="src"></select>
     <button>Cerca</button>
+    <label class="file">Importa CSV <input id="csv" type="file" accept=".csv,text/csv" hidden></label>
   </form>
   <div id="msg" class="msg"></div>
   <div class="table-wrap"><table>
@@ -41,7 +43,7 @@
 </main>
 <script>
 const cols = [["title","Prodotto"],["source","Fonte"],["kind","Tipo"],["capacity_tb","TB"],["price","Prezzo €"],["price_per_tb","€/TB"],["discount_pct","Sconto"]];
-let data = [], sort = ["price_per_tb", 1];
+let data = [], imported = [], sort = ["price_per_tb", 1];
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
@@ -69,7 +71,7 @@ async function load() {
   $("msg").textContent = "Ricerca in corso…";
   const p = new URLSearchParams({q:$("q").value}); if ($("src").value) p.set("source",$("src").value);
   const r = await (await fetch("/api/search?"+p)).json();
-  data = r.offers;
+  data = r.offers.concat(imported);
   const errs = Object.entries(r.errors).map(([k,v]) => `${k}: ${v}`).join(" · ");
   $("msg").textContent = `${data.length} offerte` + (errs ? " — " + errs : "");
   render();
@@ -80,6 +82,13 @@ async function load() {
   $("src").innerHTML = `<option value="">Tutte le fonti</option>` +
     Object.entries(s).map(([n,ok]) => `<option value="${n}">${n}${ok?"":" (non configurata)"}</option>`).join("");
   $("f").onsubmit = e => { e.preventDefault(); load(); };
+  $("csv").onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    const res = await fetch("/api/import", {method:"POST", body: await f.text()});
+    const j = await res.json();
+    if (!res.ok) { $("msg").textContent = "Importazione fallita: " + j.error; return; }
+    imported = imported.concat(j.offers); e.target.value = ""; load();
+  };
   ["kind","form","mincap","maxprice"].forEach(i => $(i).oninput = render);
   load();
 })();
